@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.workflow.mapper.FlowUserTaskMapper">
+    <insert id="insertBatch">
+        insert into flow_user_task
+        (
+        id,
+        user_id,
+        nick_name,
+        node_id,
+        order_id,
+        flow_module_id,
+        business_key,
+        business_id,
+        node_status,
+        del_flag,
+        create_time
+        )
+        VALUES
+        <foreach collection="inserts" item="item" index="index" open="" close="" separator=" , ">
+            (
+            #{item.id},
+            #{item.userId},
+            #{item.nickName},
+            #{item.nodeId},
+            #{item.orderId},
+            #{item.flowModuleId},
+            #{item.businessKey},
+            #{item.businessId},
+            #{item.nodeStatus},
+            #{item.delFlag},
+            now()
+            )
+        </foreach>
+    </insert>
+    <update id="clearForInWait">
+        update flow_user_task set node_status = #{status}, update_time = now() where node_id = #{id} and node_status =
+        #{oldStatus}
+    </update>
+    <update id="clearForInWaitAll">
+        update flow_user_task set node_status = #{status}, update_time = now() where order_id = #{order.id} and node_status =
+        #{oldStatus}
+
+    </update>
+    <select id="selectForCount" resultType="com.ruoyi.workflow.domain.dto.FlowNodeTaskDto">
+        select
+        count(0) as allCount,
+        ifnull(sum(case when apply_res is not null and apply_res = #{applyRes} then 1 else 0 end ),0) as sameCount
+        from
+        flow_user_task
+        where del_flag ='0'
+        and node_id = #{nodeId}
+    </select>
+    <select id="selectByModuleId" resultType="com.ruoyi.workflow.domain.FlowUserTask">
+        select id,
+        user_id,
+        nick_name,
+        node_id,
+        order_id,
+        flow_module_id,
+        business_key,
+        business_id,
+        node_status from
+        flow_user_task where
+        order_id = #{orderId}
+        and flow_module_id = #{flowModuleId}
+        and del_flag = '0'
+        limit 1
+    </select>
+    <select id="selectByInfo" resultType="com.ruoyi.workflow.domain.FlowUserTask">
+        select * from flow_user_task
+        where node_id = #{flowInfo.nodeId}
+        and user_id = #{flowInfo.userId}
+        and del_flag = '0'
+    </select>
+    <select id="selectMyTodo" resultType="com.ruoyi.workflow.domain.vo.FlowMyTodoDto" parameterType="com.ruoyi.workflow.domain.FlowSetMain">
+        select a.id,
+        a.user_id,
+        a.nick_name,
+        a.node_id,
+        a.file_paths,
+        a.apply_res,
+        a.apply_remark,
+        a.order_id,
+        a.flow_module_id,
+        a.business_key,
+        a.business_id,
+        a.node_status,
+        a.create_time,
+        fsm.module_name,
+        fm.id as flow_main_id,
+        fm.flow_name
+        from flow_user_task a
+        inner join flow_set_module fsm on fsm.id = a.flow_module_id
+        inner join flow_set_main fm on fm.id = fsm.flow_set_main_id
+        inner join flow_work_order fwo on fwo.id = a.order_id
+            and fwo.end_flag = 'N'
+            and fwo.close_flag = 'N'
+            and fwo.del_flag = '0'
+        where
+        a.del_flag ='0'
+        and a.node_status = 'waiting'
+        order by a.create_time desc
+    </select>
+    <select id="selectFlowRecordByOrderId"
+            parameterType="com.ruoyi.workflow.domain.dto.FlowInfoDto"
+            resultType="com.ruoyi.workflow.domain.vo.FlowMyTodoDto">
+        select a.id,
+        a.user_id,
+        a.nick_name,
+        a.node_id,
+        a.file_paths,
+        a.apply_res,
+        a.apply_remark,
+        a.order_id,
+        a.flow_module_id,
+        a.business_key,
+        a.business_id,
+        a.update_time,
+        fsm.module_name,
+        fsm.form_main_id
+        from flow_user_task a
+        inner join flow_set_module fsm on fsm.id = a.flow_module_id
+        where
+        a.del_flag ='0'
+        and a.order_id = #{orderId}
+        and a.node_status = 'pass'
+        order by a.update_time desc
+    </select>
+</mapper>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.workflow.mapper.FlowWorkOrderMapper">
+
+    <update id="updateForOrderInfo">
+        update flow_work_order a
+        inner join (
+            select
+            a.order_id,
+            group_concat(distinct m.module_name) as now_module_names,
+            group_concat(distinct m.id) as now_module_ids,
+            group_concat(distinct b.nick_name) as now_user_names,
+            group_concat(distinct b.user_id) as now_user_ids,
+            group_concat(distinct (case b.node_status when 'waiting' then b.nick_name else null end)) as todo_user_names,
+            group_concat(distinct (case b.node_status when 'waiting' then b.user_id else null end)) as todo_user_ids
+            from flow_nodes a
+            inner join flow_set_module m on m.id = a.flow_module_id
+            inner join flow_user_task b on a.id = b.node_id and b.order_id = #{orderId}
+            where a.order_id = #{orderId}
+            group by a.order_id
+        )b on a.id = b.order_id
+        set a.now_module_names = b.now_module_names,
+        a.now_module_ids = b.now_module_ids,
+        a.now_user_names = b.now_user_names,
+        a.now_user_ids = b.now_user_ids,
+        a.todo_user_names = b.todo_user_names,
+        a.todo_user_ids = b.todo_user_ids,
+        a.update_time = now()
+        where a.id = #{orderId}
+    </update>
+</mapper>

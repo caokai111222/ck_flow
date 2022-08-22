@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.workflow.mapper.FlowNodesMapper">
+    <insert id="insertBatch">
+        insert into flow_nodes
+        (
+        id,
+        order_id,
+        flow_module_id,
+        business_key,
+        business_id,
+        user_id,
+        nick_name,
+        apply_sort,
+        over_time,
+        yellow_time,
+        red_time,
+        del_flag,
+        create_by,
+        create_time
+        )
+        VALUES
+        <foreach collection="inserts" item="item" index="index" open="" close="" separator=" , ">
+            (
+            #{item.id},
+            #{item.orderId},
+            #{item.flowModuleId},
+            #{item.businessKey},
+            #{item.businessId},
+            #{item.userId},
+            #{item.nickName},
+            #{item.applySort}
+            ,#{item.overTime},
+            #{item.yellowTime},
+            #{item.redTime},
+            '0',
+            #{item.createBy},
+            now()
+            )
+        </foreach>
+    </insert>
+    <update id="updateForDid">
+        update flow_nodes set now_step ='N' where order_id = #{order.id} and flow_module_id = #{module.id}
+    </update>
+    <update id="clearForInWait">
+        update flow_nodes a
+        inner join flow_set_condition b on b.flow_module_id = a.flow_module_id and b.next_flow_module_id = #{flowSetModule.id}
+        set a.node_status = #{status}, a.update_time = now()
+        where a.order_id = #{order.id}
+    </update>
+    <update id="clearForInWaitAll">
+        update flow_nodes a
+        set a.node_status = #{status}, a.update_time = now()
+        where a.node_status = #{oldStatus} and a.order_id = #{order.id}
+    </update>
+
+    <select id="selectForPercent" resultType="com.ruoyi.workflow.domain.vo.FlowNodesPercent">
+        select apply_res,count(id) as applyCount from
+        flow_nodes where order_id = #{flowInfo.orderId} and flow_module_id = #{flowInfo.flowModuleId} and now_step ='N'
+        ande del_flag = '0'
+        group by apply_res
+    </select>
+    <select id="selectForCount" resultType="com.ruoyi.workflow.domain.dto.FlowNodeTaskDto">
+        select
+        count(distinct a.id) as allCount,
+        ifnull(sum(case when b.node_res is not null and b.node_res = a.condition_key then 1 else 0 end ),0) as sameCount
+        from
+        flow_set_condition a
+        left join flow_nodes b on b.flow_module_id = a.flow_module_id and b.order_id = #{orderId}
+        where a.next_flow_module_id = #{id}
+    </select>
+    <select id="selectByOrderIdAndModuleIds" resultType="com.ruoyi.workflow.domain.FlowNodes">
+        select id,
+        flow_module_id,
+        node_res,
+        node_status
+        from flow_nodes
+        where del_flag = '0' and order_id = #{orderId}
+        and find_in_set(flow_module_id, #{moduleIds})
+        and node_status <![CDATA[ <> ]]> 'done'
+    </select>
+</mapper>
