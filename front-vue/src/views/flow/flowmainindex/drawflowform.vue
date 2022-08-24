@@ -608,12 +608,18 @@ export default {
               if (egsize === 0) {
                 errmsg.push('开始节点应当最少有一个出口路径')
               }
+              if (!t.properties.formMainId) {
+                errmsg.push('开始节点应当配置一个关联表单')
+              }
             } else if (t.type === 'bpmn:endEvent') {
               hasEnd = true
               if (egsize === 0) {
                 errmsg.push('结束节点应当最少有一个入口路径')
               }
             } else {
+              if (t.type === 'bpmn:userTask' && !t.properties.formMainId) {
+                errmsg.push('用户任务节点应当配置一个关联表单')
+              }
               const rk = eg.filter(n => { return n.targetNodeId === t.id})
               const ck = eg.filter(n => { return n.sourceNodeId === t.id})
               if (rk.length === 0 || ck.length === 0) {
